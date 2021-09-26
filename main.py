@@ -7,8 +7,10 @@ from kivy.uix.behaviors import ButtonBehavior
 from kivy.properties import ObjectProperty
 import cv2
 
-from scripts.inference import run
+from scripts.inference import Inference
 
+
+transform_flag = False
 
 # 撮影ボタン
 class ImageButton(ButtonBehavior, Image):
@@ -16,10 +18,8 @@ class ImageButton(ButtonBehavior, Image):
 
     # ボタンを押したときに実行
     def on_press(self):
-        cv2.namedWindow("CV2 Image")
-        cv2.imshow("CV2 Image", self.preview.frame)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        global transform_flag
+        transform_flag = not transform_flag
 
 class CameraPreview(Image):
     def __init__(self, **kwargs):
@@ -28,14 +28,17 @@ class CameraPreview(Image):
         self.capture = cv2.VideoCapture(0)
         # 描画のインターバルを設定
         Clock.schedule_interval(self.update, 1.0 / 30)
+        # pixel2style2pixelを初期化
+        self.inference = Inference()
 
     # インターバルで実行する描画メソッド
     def update(self, dt):
         # フレームを読み込み
         ret, frame = self.capture.read()
-        print(frame.shape)
         # pixel2style2pixelで変換
-        # frame = run(frame)
+        if transform_flag:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame = self.inference.run(frame)
         # Kivy Textureに変換
         buf = cv2.flip(frame, 0).tostring()
         texture = Texture.create(size=(frame.shape[1], frame.shape[0]), colorfmt='bgr') 

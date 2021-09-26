@@ -6,6 +6,8 @@ import torch
 from torch.utils.data import DataLoader
 import sys
 import cv2
+from PIL import Image
+import time
 
 sys.path.append(".")
 sys.path.append("..")
@@ -16,53 +18,38 @@ from options.test_options import TestOptions
 from models.psp import pSp
 
 
-def run(frame):
-    test_opts = TestOptions().parse()
+class Inference:
+    def __init__(self):
+        test_opts = TestOptions().parse()
+        if test_opts.resize_factors is not None:
+            assert len(
+                test_opts.resize_factors.split(',')) == 1, "When running inference, provide a single downsampling factor!"
+        # update test options with options used during training
+        ckpt = torch.load(test_opts.checkpoint_path, map_location='cpu')
+        self.opts = ckpt['opts']
+        self.opts.update(vars(test_opts))
+        if 'learn_in_w' not in self.opts:
+            self.opts['learn_in_w'] = False
+        if 'output_size' not in self.opts:
+            self.opts['output_size'] = 1024
+        self.opts = Namespace(**self.opts)
+        self.net = pSp(self.opts)
+        self.net.eval()
+        self.net.cuda()
+        dataset_args = data_configs.DATASETS[self.opts.dataset_type]
+        self.transforms_dict = dataset_args['transforms'](self.opts).get_transforms()
 
-    if test_opts.resize_factors is not None:
-        assert len(
-            test_opts.resize_factors.split(',')) == 1, "When running inference, provide a single downsampling factor!"
-
-    # update test options with options used during training
-    ckpt = torch.load(test_opts.checkpoint_path, map_location='cpu')
-    opts = ckpt['opts']
-    opts.update(vars(test_opts))
-    if 'learn_in_w' not in opts:
-        opts['learn_in_w'] = False
-    if 'output_size' not in opts:
-        opts['output_size'] = 1024
-    opts = Namespace(**opts)
-
-    net = pSp(opts)
-    net.eval()
-    net.cuda()
-
-    dataset_args = data_configs.DATASETS[opts.dataset_type]
-    transforms_dict = dataset_args['transforms'](opts).get_transforms()
-    dataset = InferenceDataset(root=opts.data_path,
-                               transform=transforms_dict['transform_inference'],
-                               opts=opts)
-    dataloader = DataLoader(dataset,
-                            batch_size=opts.test_batch_size,
-                            shuffle=False,
-                            num_workers=int(opts.test_workers),
-                            drop_last=True)
-
-    img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-    if opts.n_images is None:
-        opts.n_images = len(dataset)
-
-    for input_batch in dataloader:
-        print(input_batch.shape)
+    def run(self, frame):
+        tic = time.time()
+        img = self.transforms_dict['transform_inference'](Image.fromarray(frame))
+        img = torch.reshape(img, (1, 3, 256, 256))
         with torch.no_grad():
-            input_cuda = input_batch.cuda().float()
-            result_batch = run_on_batch(input_cuda, net, opts)
+            input_cuda = img.cuda().float()
+            result_batch = run_on_batch(input_cuda, self.net, self.opts)
             result = tensor2cvimg(result_batch[0])
-            # cv2.imshow('Image', result)
-            # cv2.waitKey(0)
-            # cv2.destroyAllWindows()
-    return result
+        tac = time.time()
+        print('InferenceTime: {}'.format(tac-tic))
+        return result
 
 
 def run_on_batch(inputs, net, opts):
@@ -90,7 +77,7 @@ def run_on_batch(inputs, net, opts):
 
 def tensor2cvimg(var):
     var = var.cpu().detach().transpose(0, 2).transpose(0, 1).numpy().copy()
-    var = cv2.cvtColor(var, cv2.COLOR_BGR2RGB)
+    var = cv2.cvtColor(var, cv2.COLOR_RGB2BGR)
     var = ((var + 1) / 2)
     var[var < 0] = 0
     var[var > 1] = 1
@@ -98,5 +85,5 @@ def tensor2cvimg(var):
     return var.astype('uint8')
 
 
-if __name__ == '__main__':
-    run()
+# if __name__ == '__main__':
+#     run()
