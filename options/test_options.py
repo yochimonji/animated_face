@@ -9,9 +9,9 @@ class TestOptions:
 
 	def initialize(self):
 		# arguments for inference script
-		# self.parser.add_argument('--exp_dir', type=str, help='Path to experiment output directory')
-		self.parser.add_argument('--checkpoint_path', default='', type=str, help='Path to pSp model checkpoint')
-		self.parser.add_argument('--data_path', type=str, default='gt_images', help='Path to directory of images to evaluate')
+		self.parser.add_argument('--exp_dir', type=str, help='Path to experiment output directory')
+		self.parser.add_argument('--checkpoint_path', default='checkpoint/best_model.pt', type=str, help='Path to pSp model checkpoint')
+		self.parser.add_argument('--data_path', type=str, default='images', help='Path to directory of images to evaluate')
 		self.parser.add_argument('--couple_outputs', action='store_true', help='Whether to also save inputs + outputs side-by-side')
 		self.parser.add_argument('--resize_outputs', action='store_true', help='Whether to resize outputs to 256x256 or keep at 1024x1024')
 

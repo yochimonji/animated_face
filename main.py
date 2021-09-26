@@ -7,6 +7,8 @@ from kivy.uix.behaviors import ButtonBehavior
 from kivy.properties import ObjectProperty
 import cv2
 
+from scripts.inference import run
+
 
 # 撮影ボタン
 class ImageButton(ButtonBehavior, Image):
@@ -30,10 +32,13 @@ class CameraPreview(Image):
     # インターバルで実行する描画メソッド
     def update(self, dt):
         # フレームを読み込み
-        ret, self.frame = self.capture.read()
+        ret, frame = self.capture.read()
+        print(frame.shape)
+        # pixel2style2pixelで変換
+        # frame = run(frame)
         # Kivy Textureに変換
-        buf = cv2.flip(self.frame, 0).tostring()
-        texture = Texture.create(size=(self.frame.shape[1], self.frame.shape[0]), colorfmt='bgr') 
+        buf = cv2.flip(frame, 0).tostring()
+        texture = Texture.create(size=(frame.shape[1], frame.shape[0]), colorfmt='bgr') 
         texture.blit_buffer(buf, colorfmt='bgr', bufferfmt='ubyte')
         # インスタンスのtextureを変更
         self.texture = texture

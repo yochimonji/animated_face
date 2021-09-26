@@ -16,7 +16,7 @@ from options.test_options import TestOptions
 from models.psp import pSp
 
 
-def run():
+def run(frame):
     test_opts = TestOptions().parse()
 
     if test_opts.resize_factors is not None:
@@ -48,17 +48,21 @@ def run():
                             num_workers=int(opts.test_workers),
                             drop_last=True)
 
+    img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
     if opts.n_images is None:
         opts.n_images = len(dataset)
 
     for input_batch in dataloader:
+        print(input_batch.shape)
         with torch.no_grad():
             input_cuda = input_batch.cuda().float()
             result_batch = run_on_batch(input_cuda, net, opts)
             result = tensor2cvimg(result_batch[0])
-            cv2.imshow('Image', result)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+            # cv2.imshow('Image', result)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
+    return result
 
 
 def run_on_batch(inputs, net, opts):
