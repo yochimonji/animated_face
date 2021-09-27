@@ -11,9 +11,19 @@ from scripts.inference import Inference
 
 
 transform_flag = False
+image_flag = False
 
 # 撮影ボタン
 class ImageButton(ButtonBehavior, Image):
+    preview = ObjectProperty(None)
+
+    # ボタンを押したときに実行
+    def on_press(self):
+        global transform_flag
+        transform_flag = not transform_flag
+
+#　変換ボタン
+class TransformButton(ButtonBehavior, Image):
     preview = ObjectProperty(None)
 
     # ボタンを押したときに実行
